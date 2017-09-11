@@ -17,16 +17,16 @@ def CheckExt(ext_choices):
     """
     class Act(argparse.Action):
         def __call__(self,parser,namespace,fname,option_string=None):
-            if not os.path.exists(fname):
+            if not os.path.exists(fname[0]):
                 parser.error('file {} does not exist'
-                        % fname)
+                        .format(fname[0]) )
 
-            ext = os.path.splitext(fname)[1][1:].lower()
+            ext = os.path.splitext(fname[0])[1][1:].lower()
             if ext not in ext_choices:
-                parser.error("file doesn't end with one of {}{}"
-			.format(choices))
+                parser.error("file doesn't end with one of {}"
+			.format(', '.join(ext_choices)) )
             else:
-                setattr(namespace,self.dest,fname)
+                setattr(namespace,self.dest,fname[0])
 
     return Act
 
