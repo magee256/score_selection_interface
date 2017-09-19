@@ -1,3 +1,5 @@
+#! /usr/bin/env python3
+
 import pandas as pd
 import numpy as np
 import argparse
@@ -8,7 +10,7 @@ import os.path
 # Query with list of IDs
 # Qualtrics master list
 
-def CheckExt(ext_choices):
+def check_ext(ext_choices):
     """
     Checks if file exists and has an extension in ext_choices.
 
@@ -67,7 +69,7 @@ def prepare_data(score_csv,student_id_excel):
     score_df['Enter your Student ID number:'] = \
             score_df['Enter your Student ID number:'].apply(standardize_id_formats)
     score_df.dropna(subset=['Enter your Student ID number:'],inplace=True)
-    
+
     student_id_df = pd.read_excel(student_id_excel)
     return score_df, student_id_df
 
@@ -75,6 +77,17 @@ def write_max_scores(score_df,student_id_df):
     # Get just the Student IDs we're interested in
     sub_df = score_df[score_df['Enter your Student ID number:']
             .isin(student_id_df['Student ID'])]
+
+    # Student IDs not in the Qualtrics input file 
+    # are given a score of 0
+    not_taken = set(student_id_df['Student ID'].values) - \
+            set(sub_df['Enter your Student ID number:'].values)
+    sub_df = sub_df.append(pd.DataFrame({ 
+        'Enter your Student ID number:' : [ sid for sid in not_taken ],
+        'score' : [ 0 for sid in not_taken ],
+        }))
+    print(sub_df)
+
     max_scores = sub_df.groupby('Enter your Student ID number:').max()
     max_scores.to_excel('max_scores.xlsx')
 
@@ -92,10 +105,10 @@ if __name__ == '__main__':
             ' taken from as argument. The program then scrapes all'
             ' product reviews and additional (site-dependent) information.'))
     
-    parser.add_argument('score_csv', nargs=1, action=CheckExt(['csv']),
+    parser.add_argument('score_csv', nargs=1, action=check_ext(['csv']),
             help=('Path to CSV file containing scores'))
     parser.add_argument('student_id_excel', nargs=1, 
-            action=CheckExt(['xlsx','xlsm']),
+            action=check_ext(['xlsx','xlsm']),
             help=('Path to Excel file containing the desired'
                 ' student ID numbers.'))
 
