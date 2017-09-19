@@ -1,6 +1,5 @@
-#! /usr/bin/env python
-
 import pandas as pd
+import numpy as np
 import argparse
 import os.path
 
@@ -51,7 +50,7 @@ def standardize_id_formats(x):
     try:
         return int(x)
     except ValueError:
-        return x
+        return np.nan
 
 def prepare_data(score_csv,student_id_excel):
     """
@@ -67,6 +66,7 @@ def prepare_data(score_csv,student_id_excel):
     # Can coerce to standard form here, pick up badly formatted columns
     score_df['Enter your Student ID number:'] = \
             score_df['Enter your Student ID number:'].apply(standardize_id_formats)
+    score_df.dropna(subset=['Enter your Student ID number:'],inplace=True)
     
     student_id_df = pd.read_excel(student_id_excel)
     return score_df, student_id_df
