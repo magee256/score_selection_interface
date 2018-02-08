@@ -1,9 +1,10 @@
 #! /usr/bin/env python3
 
-import pandas as pd
-import numpy as np
 import argparse
+import numpy as np
 import os.path
+import pandas as pd
+import re
 
 
 # Upload reference data
@@ -46,32 +47,39 @@ def prep_input_args(args):
 
 def standardize_id_formats(x):
     """
-    Convert IDs that are convertable to integer to integer. May add more
-    advanced cleaning later
+    Remove invalid ID numbers. May add more advanced cleaning later. 
     """
     try:
-        return int(x)
-    except ValueError:
+        return np.int64(x)
+    except (ValueError, OverflowError):
         return np.nan
+
+
+def filter_columns(field_name):
+    columns_list = ['score', 'Enter your Student ID number:']
+    return (field_name.strip() in columns_list)
+        
 
 def prepare_data(score_csv,student_id_excel):
     """
     Loading and cleaning up the data used for the analysis
     """
-    score_df = pd.read_csv(score_csv,skiprows=1)
-    score_df.rename(columns=lambda x: x.strip(),inplace=True)
-    
-    # Narrow to just data we're interested in
-    score_df = score_df[['score','Enter your Student ID number:']]
-    score_df.dropna(subset=['Enter your Student ID number:'],inplace=True)
+    score_df = pd.read_csv(score_csv, 
+            skiprows=1,
+            usecols=filter_columns)
+    score_df.rename(columns=lambda x: x.strip(), inplace=True)
     
     # Can coerce to standard form here, pick up badly formatted columns
     score_df['Enter your Student ID number:'] = \
-            score_df['Enter your Student ID number:'].apply(standardize_id_formats)
-    score_df.dropna(subset=['Enter your Student ID number:'],inplace=True)
+            score_df['Enter your Student ID number:'] \
+                            .apply(standardize_id_formats)
+    score_df['score'] = pd.to_numeric(score_df['score'], errors='coerce')
+    score_df.dropna(axis=0, inplace=True)
 
     student_id_df = pd.read_excel(student_id_excel)
+    student_id_df['Student ID'] = student_id_df['Student ID'].astype(np.int64)
     return score_df, student_id_df
+
 
 def write_max_scores(score_df,student_id_df):
     # Get just the Student IDs we're interested in
@@ -86,10 +94,10 @@ def write_max_scores(score_df,student_id_df):
         'Enter your Student ID number:' : [ sid for sid in not_taken ],
         'score' : [ 0 for sid in not_taken ],
         }))
-    print(sub_df)
 
     max_scores = sub_df.groupby('Enter your Student ID number:').max()
     max_scores.to_excel('max_scores.xlsx')
+
 
 def max_student_scores(arg_dict):
     score_df, student_id_df = prepare_data(
